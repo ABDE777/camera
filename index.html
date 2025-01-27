@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Caméra Automatique</title>
+  <title>Détection des Doigts Levés</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -28,55 +31,82 @@
     button:hover {
       background-color: #45a049;
     }
+    .result {
+      margin-top: 20px;
+      font-size: 20px;
+      color: #333;
+    }
   </style>
 </head>
 <body>
-  <h1>Caméra Automatique</h1>
+  <h1>Détection des Doigts Levés</h1>
   <video id="camera" autoplay playsinline></video>
   <canvas id="snapshotCanvas" style="display: none;"></canvas>
-  <br>
-  <button id="captureButton">Prendre une Photo</button>
-  <a id="downloadLink" download="photo.png" style="text-decoration: none;">
-    <button style="display: none;" id="downloadButton">Télécharger la Photo</button>
-  </a>
+  <div class="result" id="result">Nombre de doigts levés : --</div>
+  <button id="captureButton">Analyser les Doigts</button>
 
   <script>
-    const camera = document.getElementById('camera');
+    const video = document.getElementById('camera');
+    const resultDisplay = document.getElementById('result');
     const captureButton = document.getElementById('captureButton');
-    const snapshotCanvas = document.getElementById('snapshotCanvas');
-    const downloadLink = document.getElementById('downloadLink');
-    const downloadButton = document.getElementById('downloadButton');
-    const canvasContext = snapshotCanvas.getContext('2d');
 
-    // Accès à la caméra
+    let model;
+
+    // Démarrer la caméra
     async function startCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        camera.srcObject = stream;
+        video.srcObject = stream;
       } catch (error) {
         alert('Impossible d’accéder à la caméra : ' + error.message);
       }
     }
 
-    // Capture de l'image
-    captureButton.addEventListener('click', () => {
-      // Définir les dimensions du canvas
-      snapshotCanvas.width = camera.videoWidth;
-      snapshotCanvas.height = camera.videoHeight;
+    // Charger le modèle Handpose
+    async function loadModel() {
+      model = await handpose.load();
+      console.log('Modèle Handpose chargé.');
+    }
 
-      // Dessiner l'image capturée dans le canvas
-      canvasContext.drawImage(camera, 0, 0, snapshotCanvas.width, snapshotCanvas.height);
+    // Détecter les doigts levés
+    async function detectFingers() {
+      const predictions = await model.estimateHands(video);
 
-      // Générer l'image en tant que URL
-      const imageURL = snapshotCanvas.toDataURL('image/png');
-      
-      // Mettre à jour le bouton de téléchargement
-      downloadLink.href = imageURL;
-      downloadButton.style.display = 'inline-block';
-    });
+      if (predictions.length > 0) {
+        const hand = predictions[0];
+        const landmarks = hand.landmarks;
 
-    // Lancer la caméra automatiquement
+        // Indices des jointures clés pour détecter les doigts
+        const fingers = [
+          [8, 6, 5], // Index
+          [12, 10, 9], // Majeur
+          [16, 14, 13], // Annulaire
+          [20, 18, 17], // Auriculaire
+          [4, 3, 2], // Pouce
+        ];
+
+        let raisedFingers = 0;
+
+        fingers.forEach((finger) => {
+          const [tip, middle, base] = finger;
+          if (landmarks[tip][1] < landmarks[middle][1] && landmarks[middle][1] < landmarks[base][1]) {
+            raisedFingers++;
+          }
+        });
+
+        // Afficher le nombre de doigts levés
+        resultDisplay.innerText = `Nombre de doigts levés : ${raisedFingers}`;
+      } else {
+        resultDisplay.innerText = 'Aucune main détectée.';
+      }
+    }
+
+    // Ajouter un événement au bouton d'analyse
+    captureButton.addEventListener('click', detectFingers);
+
+    // Lancer la caméra et charger le modèle au démarrage
     startCamera();
+    loadModel();
   </script>
 </body>
 </html>
