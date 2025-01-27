@@ -1,24 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Open Camera</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caméra Automatique</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    video, canvas {
+      max-width: 100%;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
 </head>
-
 <body>
-    <h1>Open Camera Example</h1>
-    <form>
-        <label for="cameraInput">Take a photo:</label>
-        <input type="file" id="cameraInput" accept="image/*" capture="environment">
-    </form>
-    <form>
-        <label for="cameraInputt">Take a photo:</label>
-        <input type="file" id="cameraInputt" accept="image/*" capture>
-    </form>
-            <a href="#cameraInput" download>download the img that you toke</a>
+  <h1>Caméra Automatique</h1>
+  <video id="camera" autoplay playsinline></video>
+  <canvas id="snapshotCanvas" style="display: none;"></canvas>
+  <br>
+  <button id="captureButton">Prendre une Photo</button>
+  <a id="downloadLink" download="photo.png" style="text-decoration: none;">
+    <button style="display: none;" id="downloadButton">Télécharger la Photo</button>
+  </a>
 
+  <script>
+    const camera = document.getElementById('camera');
+    const captureButton = document.getElementById('captureButton');
+    const snapshotCanvas = document.getElementById('snapshotCanvas');
+    const downloadLink = document.getElementById('downloadLink');
+    const downloadButton = document.getElementById('downloadButton');
+    const canvasContext = snapshotCanvas.getContext('2d');
+
+    // Accès à la caméra
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        camera.srcObject = stream;
+      } catch (error) {
+        alert('Impossible d’accéder à la caméra : ' + error.message);
+      }
+    }
+
+    // Capture de l'image
+    captureButton.addEventListener('click', () => {
+      // Définir les dimensions du canvas
+      snapshotCanvas.width = camera.videoWidth;
+      snapshotCanvas.height = camera.videoHeight;
+
+      // Dessiner l'image capturée dans le canvas
+      canvasContext.drawImage(camera, 0, 0, snapshotCanvas.width, snapshotCanvas.height);
+
+      // Générer l'image en tant que URL
+      const imageURL = snapshotCanvas.toDataURL('image/png');
+      
+      // Mettre à jour le bouton de téléchargement
+      downloadLink.href = imageURL;
+      downloadButton.style.display = 'inline-block';
+    });
+
+    // Lancer la caméra automatiquement
+    startCamera();
+  </script>
 </body>
-
 </html>
